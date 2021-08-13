@@ -1,0 +1,4 @@
+Verbal Food Description: "{0}"
+
+Items:
+-
