@@ -19,7 +19,7 @@ async def get_notion_row(names):
 
 async def get_database(database_id):
     root_url = 'https://api.notion.com/v1/databases'
-    url = root_url + '/' + database_id
+    url = root_url
     headers = {
         'Authorization': 'Bearer ' + os.getenv('NOTION_API_KEY'),
         'Notion-Version': os.getenv('NOTION_API_VERSION'),
