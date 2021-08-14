@@ -37,7 +37,7 @@ async def create_page(properties, database_id=os.getenv('NOTION_DATABASE_ID')):
     print(json.dumps(data, indent=4))
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(root_url, headers=headers, data=json.dumps(data)) as resp:
+        async with session.post(root_url, headers=headers, data=data) as resp:
             jsonRes = await resp.json()
             if jsonRes['object'] == 'error':
                 raise Exception(jsonRes['message'])
