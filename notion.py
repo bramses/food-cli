@@ -15,7 +15,7 @@ def async_action(f):
 env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
-async def get_notion_row(names):
+async def add_row(food):
     pass
 
 async def get_database(database_id):
@@ -28,11 +28,7 @@ async def get_database(database_id):
 
     async with aiohttp.ClientSession() as session:    
         async with session.get(url, headers=headers) as resp:
-            print("Status:", resp.status)
-            print("Content-type:", resp.headers['content-type'])
-
             jsonRes = await resp.json()
-            print(jsonRes) 
             return jsonRes     
 
 async def query_database(database_id, query={}):
@@ -44,22 +40,65 @@ async def query_database(database_id, query={}):
         'Content-Type': 'application/json',
     }
 
-    print(json.dumps(query))
-
     async with aiohttp.ClientSession() as session:    
         async with session.post(url, headers=headers, data=json.dumps(query)) as resp:
-            print("Status:", resp.status)
-            print("Content-type:", resp.headers['content-type'])
-
             jsonRes = await resp.json()
-            print(jsonRes['results']['properties']['Food']) 
             return jsonRes  
 
 async def query_database_name_list(food_names):
     query = {"filter": { "or": []  }}
+    title_property = 'Food'
     for food_name in food_names:
-        query["filter"]["or"].append({"property": "Food", "text": { "equals": food_name}})
-    return await query_database(os.getenv('NOTION_DATABASE_ID'), query)
+        query["filter"]["or"].append({"property": title_property, "text": { "equals": food_name}})
+    jsonRes = await query_database(os.getenv('NOTION_DATABASE_ID'), query)
+    results = jsonRes['results']
+    await build_food_from_page(results[1])
+    return results
 
-# asyncio.run(query_database(os.getenv('NOTION_DATABASE_ID'), {"filter" : { "property" : "Food", "text": { "equals": "test food" } }}))
+async def build_food_from_page(page):
+    food = {}
+    food['id'] = get_property_value(page, 'id')
+    food['name'] = get_property_value(page, 'Food')
+    food['calories'] = get_property_value(page, 'Calories')
+    food['fat'] = get_property_value(page, 'Fat')
+    food['saturated_fat'] = get_property_value(page, 'Saturated_Fat')
+    food['carbohydrates'] = get_property_value(page, 'Carbohydrates')
+    food['sugar'] = get_property_value(page, 'Sugar')
+    food['protein'] = get_property_value(page, 'Protein')
+    food['sodium'] = get_property_value(page, 'Sodium')
+    food['fiber'] = get_property_value(page, 'Fiber')
+    food['meal'] = get_property_value(page, 'Meal')
+    food['has_dairy'] = get_property_value(page, 'Has_Dairy')
+    food['has_processed_sugar'] = get_property_value(page, 'Has_Processed_Sugar')
+    food['favorite'] = get_property_value(page, 'Favorite')
+    food['brand'] = get_property_value(page, 'Brand')
+    food['components'] = get_property_value(page, 'Components')
+    food['raw_voice_dictation'] = get_property_value(page, 'Raw_Voice_Dictation')
+
+    print(food)
+    return food
+
+def get_property_value(page, property_name):
+    if property_name == 'id':
+        return page['id']
+    else:
+        try:
+            propertyVal = page['properties'][property_name]
+            if propertyVal['type'] == 'title':
+                return propertyVal['title'][0]['text']['content']
+            if propertyVal['type'] == 'checkbox':
+                return (property_name, propertyVal['checkbox'])
+            if propertyVal['type'] == 'select':
+                return propertyVal['select']['name']
+            if propertyVal['type'] == 'number':
+                return propertyVal['number']
+            if propertyVal['type'] == 'rich_text':
+                return propertyVal['rich_text'][0]['text']['content']
+            if propertyVal['type'] == 'relation':
+                return propertyVal['relation']
+
+            return propertyVal
+        except:
+            return None
+
 asyncio.run(query_database_name_list(["test food", "test food 2"]))
