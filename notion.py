@@ -5,6 +5,8 @@ import asyncio
 from functools import wraps
 import aiohttp
 import json
+import string
+import random
 
 def async_action(f):
     @wraps(f)
@@ -22,19 +24,24 @@ async def create_page(properties, database_id=os.getenv('NOTION_DATABASE_ID')):
     root_url = 'https://api.notion.com/v1/pages'
 
     headers = {
-        'Authorization': 'Bearer ' + os.getenv('NOTION_ACCESS_TOKEN'),
+        'Authorization': 'Bearer ' + os.getenv('NOTION_API_KEY'),
         'Content-Type': 'application/json',
         'Notion-Version': os.getenv('NOTION_API_VERSION'),
     }
 
     data = {
-        'parent': database_id,
+        'parent': { "database_id" : database_id },
         'properties': properties
     }
 
+    print(json.dumps(data, indent=4))
+
     async with aiohttp.ClientSession() as session:
         async with session.post(root_url, headers=headers, data=json.dumps(data)) as resp:
-            return await resp.json()
+            jsonRes = await resp.json()
+            if jsonRes['object'] == 'error':
+                raise Exception(jsonRes['message'])
+            return jsonRes
 
 async def get_database(database_id=os.getenv('NOTION_DATABASE_ID')):
     root_url = 'https://api.notion.com/v1/databases'
@@ -61,7 +68,7 @@ async def query_database(database_id=os.getenv('NOTION_DATABASE_ID'), query={}):
     async with aiohttp.ClientSession() as session:    
         async with session.post(url, headers=headers, data=json.dumps(query)) as resp:
             jsonRes = await resp.json()
-            return jsonRes  
+            return jsonRes
 
 async def query_database_for_food_names(food_names):
     query = {"filter": { "or": []  }}
@@ -70,25 +77,27 @@ async def query_database_for_food_names(food_names):
         query["filter"]["or"].append({"property": title_property, "text": { "equals": food_name}})
     jsonRes = await query_database(os.getenv('NOTION_DATABASE_ID'), query)
     results = jsonRes['results']
-    await build_food_from_page(results[1])
+    print(json.dumps(results, indent=4))
+    food = await build_food_from_page(results[0])
+    print(json.dumps(food, indent=4))
     return results
 
-def build_page_properties_from_food(food):
-    properties = {}
-    properties['Food'] = {'title' : [{'text': {'content': food['name']}}]}
-    properties['Brand'] = {'rich_text': [{'text': {'content': food['brand']}}]}
-    properties['Calories'] = {'number': food['calories']}
-    properties['Fat'] = {'number': food['fat']}
-    properties['Saturated_Fat'] = {'number': food['saturated_fat']}
-    properties['Carbohydrates'] = {'number': food['carbohydrates']}
-    properties['Sugar'] = {'number': food['sugar']}
-    properties['Protein'] = {'number': food['protein']}
-    properties['Sodium'] = {'number': food['sodium']}
-    properties['Fiber'] = {'number': food['fiber']}
-    properties['Meal'] = {'rich_text': [{'text': {'content': food['meal'] or 'breakfast'}}]}
-    properties['Has_Processed_Sugar'] = { 'checkbox': food['has_processed_sugar'] or False }
-    properties['Has_Dairy'] = { 'checkbox': food['has_dairy'] or False }
-    properties['Favorite'] = { 'checkbox': food['favorite'] or False }
+def build_page_properties_from_food(food = dict()):
+    properties = dict()
+    properties['Food'] = set_property_value(food.get('name', ''), 'title', 'Food')
+    properties['Brand'] = set_property_value(food.get('brand', ''), 'rich_text', 'Brand')
+    properties['Meal'] = set_property_value(food.get('meal', ''), 'select', 'Meal')
+    properties['Calories'] = set_property_value(food.get('calories', -1), 'number', 'Calories')
+    properties['Fat'] = set_property_value(food.get('fat', -1), 'number', 'Fat')
+    properties['Saturated_Fat'] = set_property_value(food.get('saturated_fat', -1), 'number', 'Saturated_Fat')
+    properties['Carbohydrates'] = set_property_value(food.get('carbohydrates', -1), 'number', 'Carbohydrates')
+    properties['Sugar'] = set_property_value(food.get('sugar', -1), 'number', 'Sugar')
+    properties['Protein'] = set_property_value(food.get('protein', -1), 'number', 'Protein')
+    properties['Sodium'] = set_property_value(food.get('sodium', -1), 'number', 'Sodium')
+    properties['Fiber'] = set_property_value(food.get('fiber', -1), 'number', 'Fiber')
+    properties['Has_Processed_Sugar'] = set_property_value(food.get('has_processed_sugar', False), 'checkbox', 'Has_Processed_Sugar')
+    properties['Has_Dairy'] = set_property_value(food.get('has_dairy', False), 'checkbox', 'Has_Dairy')
+    properties['Favorite'] = set_property_value(food.get('favorite', False), 'checkbox', 'Favorite')
     return properties
 
 '''
@@ -115,33 +124,37 @@ async def build_food_from_page(page):
     food['components'] = get_property_value(page, 'Components')
     food['raw_voice_dictation'] = get_property_value(page, 'Raw_Voice_Dictation')
 
+
     return food
 
-def set_property_value(property_name, property_value):
+def generate_random_short_string():
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+
+def set_property_value(property_name, property_value, validation_name=None):
     if property_value == 'title':
         try:
-           property_value = {'title' : [{'text': {'content': property_name}}]}
+           property_value = {'title' : [{'text': {'content': property_name}}], 'name': validation_name }
            return property_value
         except:
-            return {'title' : [{'text': {'content': ''}}]}
+            return {'title' : [{'text': {'content': ''}}], 'name': validation_name }
     elif property_value == 'rich_text':
         try:
-            property_value = {'rich_text': [{'text': {'content': property_name}}]}
+            property_value = {'rich_text': [{'text': {'content': property_name}}], 'name': validation_name }
             return property_value
         except:
-            return {'rich_text': [{'text': {'content': ''}}]}
+            return {'rich_text': [{'text': {'content': ''}}], 'name': validation_name }
     elif property_value == 'number':
         try:
-            property_value = {'number': property_name}
+            property_value = {'number': property_name, 'name': validation_name }
             return property_value
         except:
-            return {'number': 0}
+            return {'number': -1, 'name': validation_name }
     elif property_value == 'checkbox':
         try:
-            property_value = {'checkbox': property_name}
+            property_value = {'checkbox': property_name, 'name': validation_name }
             return property_value
         except:
-            return {'checkbox': False}
+            return {'checkbox': False, 'name': validation_name }
     else:
         return None
 
@@ -169,3 +182,4 @@ def get_property_value(page, property_name):
             return None
 
 asyncio.run(create_food({'name': 'Sorbet', 'brand': 'Talenti', 'serving': 'cup', 'calories': 120.0, 'fat': 0.0, 'carbohydrates': 29.0, 'protein': 0.0, 'sugar': 25.0, 'fiber': 3.0, 'sodium': -1.0, 'saturated_fat': -1.0, 'cholesterol': -1.0}))
+# asyncio.run(query_database_for_food_names(['test food']))
