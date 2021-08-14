@@ -22,8 +22,15 @@ async def get_database(database_id):
     url = root_url + '/' + database_id
     headers = {
         'Authorization': 'Bearer ' + os.getenv('NOTION_API_KEY'),
-        'Content-Type': 'application/json'
+        'Notion-Version': os.getenv('NOTION_API_VERSION'),
     }
-    async with aiohttp.ClientSession() as session:
+
+    async with aiohttp.ClientSession() as session:    
         async with session.get(url, headers=headers) as resp:
-            return await resp.json()
+            print("Status:", resp.status)
+            print("Content-type:", resp.headers['content-type'])
+
+            json = await resp.json()
+            print(json) 
+
+asyncio.run(get_database(os.getenv('NOTION_DATABASE_ID')))
