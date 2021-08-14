@@ -52,7 +52,7 @@ async def query_database(database_id, query={}):
             print("Content-type:", resp.headers['content-type'])
 
             jsonRes = await resp.json()
-            print(jsonRes) 
+            print(jsonRes['results']['properties']['Food']) 
             return jsonRes  
 
 async def query_database_name_list(food_names):
