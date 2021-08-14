@@ -50,7 +50,7 @@ async def create_page(properties, database_id=os.getenv('NOTION_DATABASE_ID')):
 
     print(json.dumps(data, indent=4))
 
-    async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
+    async with aiohttp.ClientSession() as session:
         async with session.post(root_url, headers=headers, json=data) as resp:
             jsonRes = await resp.json()
             print(json.dumps(jsonRes, indent=4))
@@ -101,7 +101,7 @@ def build_page_properties_from_food(food = dict()):
     properties = dict()
     properties['Food'] = set_property_value(food.get('name', ''), 'title', 'Food')
     properties['Brand'] = set_property_value(food.get('brand', ''), 'rich_text', 'Brand')
-    # properties['Meal'] = set_property_value(food.get('meal', ''), 'select', 'Meal')
+    properties['Meal'] = set_property_value(food.get('meal', ''), 'select', 'Meal')
     properties['Calories'] = set_property_value(food.get('calories', -1), 'number', 'Calories')
     properties['Fat'] = set_property_value(food.get('fat', -1), 'number', 'Fat')
     properties['Saturated_Fat'] = set_property_value(food.get('saturated_fat', -1), 'number', 'Saturated Fat')
@@ -153,26 +153,32 @@ def set_property_value(property_name, property_value, validation_name=None):
         except:
             return {'title' : [{'text': {'content': ''}}], 'name': validation_name, 'type': 'title' }
     elif property_value == 'rich_text':
-        # return None
         try:
             property_value = {'rich_text': [{'text': {'content': property_name}}], 'name': validation_name, 'type': 'text' }
             return property_value
         except:
             return {'rich_text': [{'text': {'content': ''}}], 'name': validation_name, 'type': 'text' }
     elif property_value == 'number':
-        # return None
         try:
             property_value = {'number': property_name, 'name': validation_name, 'type': 'number' }
             return property_value
         except:
             return {'number': -1, 'name': validation_name, 'type': 'number' }
     elif property_value == 'checkbox':
-        # return None
         try:
             property_value = {'checkbox': property_name, 'name': validation_name, 'type': 'checkbox' }
             return property_value
         except:
             return {'checkbox': False, 'name': validation_name, 'type': 'checkbox' }
+    elif property_value == 'select':
+        try:
+            if property_name == '':
+                property_value = {'select': { 'name': 'default' }, 'name': validation_name, 'type': 'select' }
+            else:
+                property_value = {'select': { 'name': property_name }, 'name': validation_name, 'type': 'select' }
+            return property_value
+        except:
+            return {'select': { 'name': '' }, 'name': validation_name, 'type': 'select' }
     else:
         return None
 
