@@ -1,4 +1,5 @@
 from datetime import datetime
+import pytz
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -101,11 +102,22 @@ async def query_database_for_food_names(food_names):
     print(json.dumps(food, indent=4))
     return results
 
+def infer_meal_from_time():
+    now = datetime.now(pytz.timezone(os.getenv('TIMEZONE')))
+    if now.hour >= int(os.getenv('BREAKFAST_START')) and now.hour < int(os.getenv('BREAKFAST_END')):
+        return 'breakfast'
+    elif now.hour >= int(os.getenv('LUNCH_START')) and now.hour < int(os.getenv('LUNCH_END')):
+        return 'lunch'
+    elif now.hour >= int(os.getenv('DINNER_START')) and now.hour < int(os.getenv('DINNER_END')):
+        return 'dinner'
+    else:
+        return 'snack'
+
 def build_page_properties_from_food(food = dict()):
     properties = dict()
     properties['Food'] = set_property_value(food.get('name', ''), 'title', 'Food')
     properties['Brand'] = set_property_value(food.get('brand', ''), 'rich_text', 'Brand')
-    properties['Meal'] = set_property_value(food.get('meal', ''), 'select', 'Meal')
+    properties['Meal'] = set_property_value(food.get('meal', infer_meal_from_time()), 'select', 'Meal')
     properties['Calories'] = set_property_value(food.get('calories', -1), 'number', 'Calories')
     properties['Fat'] = set_property_value(food.get('fat', -1), 'number', 'Fat')
     properties['Saturated_Fat'] = set_property_value(food.get('saturated_fat', -1), 'number', 'Saturated Fat')
@@ -150,6 +162,8 @@ async def build_food_from_page(page):
 
 def generate_random_short_string():
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
+
+
 
 def set_property_value(property_name, property_value, validation_name=None):
     if property_value == 'title':
