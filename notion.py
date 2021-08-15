@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -43,9 +44,12 @@ async def create_page(properties, database_id=os.getenv('NOTION_DATABASE_ID')):
         'Notion-Version': os.getenv('NOTION_API_VERSION'),
     }
 
+    now = datetime.now()
+
     data = {
         'parent': { "database_id" : database_id },
-        'properties': properties
+        'properties': properties,
+        'created_time': now.isoformat(),
     }
 
     print(json.dumps(data, indent=4))
@@ -113,6 +117,8 @@ def build_page_properties_from_food(food = dict()):
     properties['Has_Processed_Sugar'] = set_property_value(food.get('has_processed_sugar', False), 'checkbox', 'Has_Processed_Sugar')
     properties['Has_Dairy'] = set_property_value(food.get('has_dairy', False), 'checkbox', 'Has_Dairy')
     properties['Favorite'] = set_property_value(food.get('favorite', False), 'checkbox', 'Favorite')
+    now = datetime.now()
+    properties['Date'] = set_property_value(now.isoformat(), 'date', 'Date')
     return properties
 
 '''
@@ -179,6 +185,13 @@ def set_property_value(property_name, property_value, validation_name=None):
             return property_value
         except:
             return {'select': { 'name': '' }, 'name': validation_name, 'type': 'select' }
+    elif property_value == 'date':
+        try:
+            property_value = {'date': property_name, 'name': validation_name, 'type': 'date' }
+            return property_value
+        except:
+            now = datetime.now()
+            return {'date': now.isoformat(), 'name': validation_name, 'type': 'date' }
     else:
         return None
 

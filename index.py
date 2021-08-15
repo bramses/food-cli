@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import asyncio
+from notion import create_food
 
 from flask import Flask, request, redirect, url_for, render_template
 from functools import wraps
@@ -21,10 +22,6 @@ env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 client = myfitnesspal.Client(os.getenv("MFP_EMAIL"))
-
-def lookup_food_from_dictation(dictated_text):
-    pass
-
 
 
 def find_best_match_food_in_mfp(food_name):
@@ -88,8 +85,6 @@ def find_best_match_food_in_mfp(food_name):
             except KeyError as e:
                 food["cholesterol"] = -1.0
 
-            print(food)
-
             return food
 
 
@@ -103,10 +98,19 @@ async def split_into_ingredients(text):
         stop=['\n\n'],
         top_p=1.0
     )
-    ingredients = ingredients_text.split('\n')
+    ingredients = list(map(lambda ingredient: ingredient.replace('-', ''), ingredients_text.split('\n'))) 
+   
+    return ingredients
+
+async def lookup_food_from_dictation(dictated_text):
+    ingredients = await split_into_ingredients(dictated_text)
     for ingredient in ingredients:
-        ingredient = ingredient.replace('-', '')
-        find_best_match_food_in_mfp(ingredient)
+        print(ingredient)
+        res = find_best_match_food_in_mfp(ingredient)
+        notionres = await create_food(res)
+        print(notionres)
+
+# asyncio.run(lookup_food_from_dictation('i had a chicken wing and 2 slices of sourdough bread'))
 
 # use the notion api to aggregate rows into a single row with combined nutrition data
 # an array of rows of ids
