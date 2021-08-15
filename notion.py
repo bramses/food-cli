@@ -49,7 +49,7 @@ async def create_page(properties, database_id=os.getenv('NOTION_DATABASE_ID')):
     data = {
         'parent': { "database_id" : database_id },
         'properties': properties,
-        'created_time': now.isoformat(),
+        'created_time': now.isoformat() + 'Z',
     }
 
     print(json.dumps(data, indent=4))
@@ -118,7 +118,7 @@ def build_page_properties_from_food(food = dict()):
     properties['Has_Dairy'] = set_property_value(food.get('has_dairy', False), 'checkbox', 'Has_Dairy')
     properties['Favorite'] = set_property_value(food.get('favorite', False), 'checkbox', 'Favorite')
     now = datetime.now()
-    properties['Date'] = set_property_value(now.isoformat(), 'date', 'Date')
+    properties['Date'] = set_property_value(now.isoformat() + 'Z', 'date', 'Date')
     return properties
 
 '''
@@ -187,11 +187,11 @@ def set_property_value(property_name, property_value, validation_name=None):
             return {'select': { 'name': '' }, 'name': validation_name, 'type': 'select' }
     elif property_value == 'date':
         try:
-            property_value = {'date': property_name, 'name': validation_name, 'type': 'date' }
+            property_value = {'date': { 'start': property_name }, 'name': validation_name, 'type': 'date' }
             return property_value
         except:
             now = datetime.now()
-            return {'date': now.isoformat(), 'name': validation_name, 'type': 'date' }
+            return {'date': { 'start': now.isoformat() + 'Z' }, 'name': validation_name, 'type': 'date' }
     else:
         return None
 
