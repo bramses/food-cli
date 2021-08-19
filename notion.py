@@ -102,6 +102,38 @@ async def query_database_for_food_names(food_names):
     print(json.dumps(food, indent=4))
     return results
 
+async def find_food_duplicates_in_notion(food_name):
+    query = { "filter": { "or": [{ "property": "Food", "text": { "contains": food_name } }]  }}
+    query_res = await query_database(os.getenv('NOTION_DATABASE_ID'), query)
+    results = query_res['results']
+
+
+    if len(results) > 0:
+        top_result_food_name = ''
+        if len(results) > 1:
+            print('Found multiple results for ' + food_name)
+            top_result = None
+            for result in results:
+                for food_name in result['properties']['Food']['title']:
+                    result_food_name = food_name['text']['content']
+                    if result_food_name == 'Copy of ':
+                        continue
+                    else:
+                        top_result = result
+                        top_result_food_name = result_food_name
+                        break
+        else:
+            top_result = results[0]
+            top_result_food_name = top_result['properties']['Food']['title'][0]['text']['content']
+        
+        top_result['properties'] = { "Food" : 'Copy of ' + top_result_food_name }
+        print(json.dumps(top_result, indent=4))
+        return top_result # only interested in the closest match
+
+    return results
+
+asyncio.run(find_food_duplicates_in_notion('2 Slices of Toast'))
+
 def infer_meal_from_time():
     now = datetime.now(pytz.timezone(os.getenv('TIMEZONE')))
     if now.hour >= int(os.getenv('BREAKFAST_START')) and now.hour < int(os.getenv('BREAKFAST_END')):
@@ -163,12 +195,10 @@ async def build_food_from_page(page):
 def generate_random_short_string():
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
-
-
 def set_property_value(property_name, property_value, validation_name=None):
     if property_value == 'title':
         try:
-           property_value = {'title' : [{'text': {'content': property_name}}], 'name': validation_name, 'type': 'title', 'id': generate_random_short_string() }
+           property_value = {'title' : [{'text': {'content': property_name.lower()}}], 'name': validation_name, 'type': 'title', 'id': generate_random_short_string() }
            return property_value
         except:
             return {'title' : [{'text': {'content': ''}}], 'name': validation_name, 'type': 'title' }
@@ -232,5 +262,5 @@ def get_property_value(page, property_name):
         except:
             return None
 
-asyncio.run(create_food({'name': 'Sorbet', 'brand': 'Talenti', 'serving': 'cup', 'calories': 120.0, 'fat': 0.0, 'carbohydrates': 29.0, 'protein': 0.0, 'sugar': 25.0, 'fiber': 3.0, 'sodium': -1.0, 'saturated_fat': -1.0, 'cholesterol': -1.0}))
+# asyncio.run(create_food({'name': 'Sorbet', 'brand': 'Talenti', 'serving': 'cup', 'calories': 120.0, 'fat': 0.0, 'carbohydrates': 29.0, 'protein': 0.0, 'sugar': 25.0, 'fiber': 3.0, 'sodium': -1.0, 'saturated_fat': -1.0, 'cholesterol': -1.0}))
 # asyncio.run(query_database_for_food_names(['test food']))
