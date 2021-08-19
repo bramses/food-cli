@@ -204,10 +204,12 @@ def set_property_value(property_name, property_value, validation_name=None):
             return {'title' : [{'text': {'content': ''}}], 'name': validation_name, 'type': 'title' }
     elif property_value == 'rich_text':
         try:
-            property_value = {'rich_text': [{'text': {'content': property_name}}], 'name': validation_name, 'type': 'text' }
+            if property_name is None:
+                raise Exception('Rich text property is empty')
+            property_value = {'rich_text': [{'text': {'content': property_name}}], 'name': validation_name, 'type': 'rich_text' }
             return property_value
         except:
-            return {'rich_text': [{'text': {'content': ''}}], 'name': validation_name, 'type': 'text' }
+            return {'rich_text': [{'text': {'content': 'brandless'}}], 'name': validation_name, 'type': 'rich_text' }
     elif property_value == 'number':
         try:
             property_value = {'number': property_name, 'name': validation_name, 'type': 'number' }

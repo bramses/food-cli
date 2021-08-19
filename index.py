@@ -123,7 +123,9 @@ async def create_aggregate_food(rows):
 async def admin(password, dictation):
     if password != os.getenv("DICTATION_PASSWORD"):
         return redirect(url_for('index'))
-    return dictation
+    else:
+        await lookup_food_from_dictation(dictation)
+        return 'success'
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -133,6 +135,6 @@ def index():
 
 # find_best_match_food_in_mfp("talenti rasberry sorbet")
 
-# if __name__ == '__main__':
-#     app.debug = True
-#     app.run(port=8080)
+if __name__ == '__main__':
+    app.debug = True
+    app.run(port=8080)
