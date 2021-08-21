@@ -93,46 +93,47 @@ def generate_random_short_string():
 def set_property_value(property_name, property_value, validation_name=None):
     if property_value == 'title':
         try:
-           property_value = {'title' : [{'text': {'content': property_name.lower()}}], 'name': validation_name, 'type': 'title', 'id': generate_random_short_string() }
+           print(property_name, property_value, validation_name)
+           property_value = {'title' : [{'text': {'content': property_name.lower()}}], 'type': 'title', 'id': generate_random_short_string() }
            return property_value
         except:
-            return {'title' : [{'text': {'content': ''}}], 'name': validation_name, 'type': 'title' }
+            return {'title' : [{'text': {'content': ''}}], 'type': 'title' }
     elif property_value == 'rich_text':
         try:
             if property_name is None:
                 raise Exception('Rich text property is empty')
-            property_value = {'rich_text': [{'text': {'content': property_name}}], 'name': validation_name, 'type': 'rich_text' }
+            property_value = {'rich_text': [{'text': {'content': property_name}}], 'type': 'rich_text' }
             return property_value
         except:
-            return {'rich_text': [{'text': {'content': 'brandless'}}], 'name': validation_name, 'type': 'rich_text' }
+            return {'rich_text': [{'text': {'content': 'brandless'}}], 'type': 'rich_text' }
     elif property_value == 'number':
         try:
-            property_value = {'number': property_name, 'name': validation_name, 'type': 'number' }
+            property_value = {'number': property_name, 'type': 'number' }
             return property_value
         except:
-            return {'number': -1, 'name': validation_name, 'type': 'number' }
+            return {'number': -1, 'type': 'number' }
     elif property_value == 'checkbox':
         try:
-            property_value = {'checkbox': property_name, 'name': validation_name, 'type': 'checkbox' }
+            property_value = {'checkbox': property_name, 'type': 'checkbox' }
             return property_value
         except:
-            return {'checkbox': False, 'name': validation_name, 'type': 'checkbox' }
+            return {'checkbox': False, 'type': 'checkbox' }
     elif property_value == 'select':
         try:
             if property_name == '':
-                property_value = {'select': { 'name': 'default' }, 'name': validation_name, 'type': 'select' }
+                property_value = {'select': { 'name': 'default' }, 'type': 'select' }
             else:
-                property_value = {'select': { 'name': property_name }, 'name': validation_name, 'type': 'select' }
+                property_value = {'select': { 'name': property_name }, 'type': 'select' }
             return property_value
         except:
-            return {'select': { 'name': '' }, 'name': validation_name, 'type': 'select' }
+            return {'select': { 'name': '' }, 'type': 'select' }
     elif property_value == 'date':
         try:
-            property_value = {'date': { 'start': property_name }, 'name': validation_name, 'type': 'date' }
+            property_value = {'date': { 'start': property_name }, 'type': 'date' }
             return property_value
         except:
             now = datetime.now()
-            return {'date': { 'start': now.isoformat() + 'Z' }, 'name': validation_name, 'type': 'date' }
+            return {'date': { 'start': now.isoformat() + 'Z' }, 'type': 'date' }
     else:
         return None
 
