@@ -162,6 +162,7 @@ def build_page_properties_from_food(food = dict()):
     properties['Favorite'] = set_property_value(food.get('favorite', False), 'checkbox', 'Favorite')
     now = datetime.now()
     properties['Date'] = set_property_value(now.isoformat() + 'Z', 'date', 'Date')
+    properties['Raw_Voice_Dictation'] = set_property_value(food.get('Raw_Voice_Dictation', ''), 'rich_text', 'Raw_Voice_Dictation')
     return properties
 
 '''
@@ -207,16 +208,15 @@ async def split_into_ingredients(text):
 async def lookup_food_from_dictation(dictated_text):
     ingredients = await split_into_ingredients(dictated_text)
     for ingredient in ingredients:
-        print(ingredient)
+        print('Ingredient is %s', ingredient)
         res = find_best_match_food_in_mfp(ingredient)
+        res['Raw_Voice_Dictation'] = dictated_text
         notionres = await create_food(res)
         print(notionres)
 
-# asyncio.run(lookup_food_from_dictation('i had a chicken wing and 2 slices of sourdough bread'))
 
 # use the notion api to aggregate rows into a single row with combined nutrition data
 # an array of rows of ids
-# {'name': 'Sorbet', 'brand': 'Talenti', 'serving': 'cup', 'calories': 120.0, 'fat': 0.0, 'carbohydrates': 29.0, 'protein': 0.0, 'sugar': 25.0, 'fiber': 3.0, 'sodium': -1.0, 'saturated_fat': -1.0, 'cholesterol': -1.0}
 async def create_aggregate_food(rows):
     pass
 
@@ -232,10 +232,6 @@ async def admin(password, dictation):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     return "bram's food journal"
-
-# asyncio.run(split_into_ingredients("I had an egg sandwich with cheese, oatmeal with raisins, and cucumber water"))
-
-# find_best_match_food_in_mfp("talenti rasberry sorbet")
 
 if __name__ == '__main__':
     app.debug = True
