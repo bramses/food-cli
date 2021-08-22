@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import asyncio
+import sys
 from notion import get_property_value, set_property_value, query_database, create_page
 
 from flask import Flask, request, redirect, url_for, render_template
@@ -23,17 +24,21 @@ app = Flask(__name__)
 env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
-client = myfitnesspal.Client(os.getenv("MFP_EMAIL"))
+client = myfitnesspal.Client(os.getenv("MFP_EMAIL"),password=os.getenv("MFP_PASSWORD"))
 
 async def create_food(food):
     return await create_page(build_page_properties_from_food(food), os.getenv('NOTION_DATABASE_ID'))
 
 def find_best_match_food_in_mfp(food_name):
-    food_items = client.get_food_search_results(food_name)
+    print('searcing mfp for food %s' % food_name)
+    food_items = []
+    try:
+        food_items = client.get_food_search_results(food_name)
+    except:
+        raise ValueError('mfpal search error')
     if len(food_items) == 0:
         return None
     else:
-
         best_match_id = food_items[0].mfp_id
         if best_match_id is None:
             return None
@@ -43,7 +48,7 @@ def find_best_match_food_in_mfp(food_name):
             food["name"] = food_details.name
             food["brand"] = food_details._brand
             food["serving"] = food_details.serving
-            
+
             try:
                 food["calories"] = food_details.calories
             except KeyError as e:
@@ -78,7 +83,7 @@ def find_best_match_food_in_mfp(food_name):
                 food["sodium"] = food_details.sodium
             except KeyError as e:
                 food["sodium"] = -1.0
-            
+
             try:
                 food["saturated_fat"] = food_details.saturated_fat
             except KeyError as e:
@@ -126,7 +131,7 @@ async def find_food_duplicates_in_notion(food_name):
         else:
             top_result = results[0]
             top_result_food_name = top_result['properties']['Food']['title'][0]['text']['content']
-        
+
         top_result['properties'] = { "Food" : 'Copy of ' + top_result_food_name }
         print(json.dumps(top_result, indent=4))
         return top_result # only interested in the closest match
@@ -201,15 +206,19 @@ async def split_into_ingredients(text):
         stop=['\n\n'],
         top_p=1.0
     )
-    ingredients = list(map(lambda ingredient: ingredient.replace('-', ''), ingredients_text.split('\n'))) 
-   
+    ingredients = list(map(lambda ingredient: ingredient.replace('-', ''), ingredients_text.split('\n')))
+
     return ingredients
 
 async def lookup_food_from_dictation(dictated_text):
     ingredients = await split_into_ingredients(dictated_text)
     for ingredient in ingredients:
         print('Ingredient is %s', ingredient)
-        res = find_best_match_food_in_mfp(ingredient)
+        res = dict()
+        try:
+            res = find_best_match_food_in_mfp(ingredient)
+        except:
+            print("Unexpected error: skipping mfpal", sys.exc_info()[0])
         res['Raw_Voice_Dictation'] = dictated_text
         notionres = await create_food(res)
         print(notionres)
